@@ -1,0 +1,53 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agenttrace"
+version = "0.1.0"
+description = "Zero-config local-first visual debugging and auto-evaluation for LLM agents."
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.9"
+authors = [
+  { name="AgentTrace Contributors" }
+]
+keywords = ["llm", "agent", "debugging", "observability", "opentelemetry", "tracing"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Debuggers",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+    "fastapi>=0.100.0",
+    "uvicorn>=0.23.0",
+    "pydantic>=2.0.0",
+    "openai>=1.0.0",
+    "opentelemetry-api>=1.20.0",
+    "opentelemetry-sdk>=1.20.0",
+    "opentelemetry-instrumentation-openai>=0.1.0",
+]
+
+[project.optional-dependencies]
+judge = ["groq>=0.9.0"]
+langchain = ["langchain-core>=0.2.0"]
+all = ["groq>=0.9.0", "langchain-core>=0.2.0"]
+
+[project.urls]
+Homepage = "https://github.com/YOUR_USERNAME/AgentTrace"
+Issues = "https://github.com/YOUR_USERNAME/AgentTrace/issues"
+
+[tool.setuptools]
+packages = ["agenttrace", "agenttrace.integrations"]
+include-package-data = true
+
+[tool.setuptools.package-data]
+agenttrace = ["static/**", "static/*"]

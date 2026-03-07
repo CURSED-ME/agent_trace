@@ -1,0 +1,15 @@
+node_modules/
+.env
+__pycache__/
+*.pyc
+agenttrace.egg-info/
+ui/dist/
+.agenttrace.db
+.agenttrace.db-shm
+.agenttrace.db-wal
+dist/
+build/
+*.egg-info/
+.venv/
+venv/
+.gemini/
