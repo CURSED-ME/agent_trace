@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agenttrace-ai"
-version = "0.1.0"
+version = "0.1.1"
 description = "Zero-config local-first visual debugging and auto-evaluation for LLM agents."
 readme = "README.md"
 license = {text = "MIT"}
