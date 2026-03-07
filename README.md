@@ -202,7 +202,7 @@ agenttrace/
 We welcome contributions! Here's how to set up the dev environment:
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/AgentTrace.git
+git clone https://github.com/CURSED-ME/AgentTrace.git
 cd AgentTrace
 pip install -e ".[all]"
 

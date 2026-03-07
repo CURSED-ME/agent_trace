@@ -41,8 +41,8 @@ langchain = ["langchain-core>=0.2.0"]
 all = ["openai>=1.0.0", "opentelemetry-instrumentation-openai>=0.1.0", "groq>=0.9.0", "langchain-core>=0.2.0"]
 
 [project.urls]
-Homepage = "https://github.com/YOUR_USERNAME/AgentTrace"
-Issues = "https://github.com/YOUR_USERNAME/AgentTrace/issues"
+Homepage = "https://github.com/CURSED-ME/AgentTrace"
+Issues = "https://github.com/CURSED-ME/AgentTrace/issues"
 
 [tool.setuptools]
 packages = ["agenttrace", "agenttrace.integrations"]
