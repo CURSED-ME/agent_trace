@@ -162,9 +162,9 @@ def update_step(step: TraceStep):
         conn = _get_connection()
         conn.execute(
             """
-            UPDATE steps SET 
-                outputs = ?, 
-                metrics = ?, 
+            UPDATE steps SET
+                outputs = ?,
+                metrics = ?,
                 evaluation = ?,
                 timestamp = ?
             WHERE step_id = ?
