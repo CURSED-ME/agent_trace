@@ -49,7 +49,7 @@ AgentTrace doesn't just *show* you what happened — it *tells you what went wro
 | 🔧 **Tool Misuse** | Detects wrong arguments or failed tool calls | LLM-powered (optional) |
 | 📝 **Instruction Drift** | Detects when LLM ignores the system prompt | LLM-powered (optional) |
 
-> LLM-powered checks require a free [Groq API key](https://console.groq.com). Install with `pip install agenttrace[judge]`.
+> LLM-powered checks require a free [Groq API key](https://console.groq.com). Install with `pip install "agenttrace-ai[judge]"`.
 
 ### ▶️ Trace Replay
 Press **Play** and watch your agent's execution animate step-by-step — like a video recording of its thought process. Drag the scrubber to jump to any moment. Flagged steps pulse red.
@@ -60,8 +60,8 @@ If your agent throws an unhandled exception, AgentTrace catches it and logs the 
 ### 🔌 Framework Support
 | Framework | Status | Setup Required |
 |---|---|---|
-| OpenAI SDK | ✅ Native | `pip install agenttrace[openai]` |
-| Groq SDK | ✅ Native | `pip install agenttrace[openai]` |
+| OpenAI SDK | ✅ Native | `pip install "agenttrace-ai[openai]"` |
+| Groq SDK | ✅ Native | `pip install "agenttrace-ai[openai]"` |
 | LangChain | ✅ Adapter | None (auto-detected) |
 | CrewAI | ✅ Adapter | None (auto-detected) |
 
@@ -73,13 +73,13 @@ If your agent throws an unhandled exception, AgentTrace catches it and logs the 
 
 ```bash
 # Core (works with LangChain out of the box)
-pip install -e .
+pip install agenttrace-ai
 
 # With OpenAI/Groq support
-pip install -e ".[openai]"
+pip install "agenttrace-ai[openai]"
 
 # With everything (OpenAI + Auto-Judge + LangChain)
-pip install -e ".[all]"
+pip install "agenttrace-ai[all]"
 ```
 
 ### Basic Usage (OpenAI / Groq)

@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "agenttrace"
+name = "agenttrace-ai"
 version = "0.1.0"
 description = "Zero-config local-first visual debugging and auto-evaluation for LLM agents."
 readme = "README.md"
