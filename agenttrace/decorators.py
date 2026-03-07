@@ -5,9 +5,11 @@ from .models import TraceStep, StepMetrics
 from .storage import add_step
 
 
-def track_tool(name=None):
-    def decorator(func):
-        tool_name = name or func.__name__
+def track_tool(func=None, *, name=None):
+    """Decorator to track tool executions. Use as @track_tool or @track_tool(name='my_tool')."""
+
+    def decorator(f):
+        tool_name = name or f.__name__
 
         if asyncio.iscoroutinefunction(func):
 
@@ -60,12 +62,16 @@ def track_tool(name=None):
 
             return sync_wrapper
 
+    if func is not None:
+        return decorator(func)
     return decorator
 
 
-def track_agent(name=None):
-    def decorator(func):
-        agent_name = name or func.__name__
+def track_agent(func=None, *, name=None):
+    """Decorator to track agent executions. Use as @track_agent or @track_agent(name='my_agent')."""
+
+    def decorator(f):
+        agent_name = name or f.__name__
 
         if asyncio.iscoroutinefunction(func):
 
@@ -118,4 +124,6 @@ def track_agent(name=None):
 
             return sync_wrapper
 
+    if func is not None:
+        return decorator(func)
     return decorator

@@ -2,9 +2,8 @@ import os
 import json
 import asyncio
 from typing import List
-from datetime import datetime
 from .storage import _get_connection, _db_lock, update_step, get_trace_by_id
-from .models import TraceStep, StepEvaluation, AgentTrace
+from .models import TraceStep, AgentTrace
 
 
 class JudgeEngine:
@@ -40,7 +39,14 @@ class JudgeEngine:
 
         # Run LLM checks if API key is present
         if self.api_key:
-            import groq
+            try:
+                import groq
+            except ImportError:
+                print(
+                    "AgentTrace Judge: groq package not installed. Install with: pip install agenttrace[judge]"
+                )
+                self.api_key = None
+                return
 
             client = groq.AsyncGroq(api_key=self.api_key)
             tasks = []
@@ -48,7 +54,6 @@ class JudgeEngine:
                 if step.type == "llm_call":
                     tasks.append(self._check_instruction_drift(client, step))
                 elif step.type == "tool_execution":
-                    # We could check tool misuse here
                     tasks.append(self._check_tool_misuse(client, step, trace))
 
             if tasks:
@@ -211,7 +216,7 @@ Return "FAIL: <reasoning>" if the tool was misused.
             if content.startswith("FAIL"):
                 if "tool_misuse" not in step.evaluation.flags:
                     step.evaluation.flags.append("tool_misuse")
-        except Exception as e:
+        except Exception:
             pass  # Keep it simple, don't flag judge error on secondary checks
 
 

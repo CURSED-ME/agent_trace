@@ -18,14 +18,14 @@
 
 You build an AI agent. It calls an LLM, uses tools, chains prompts together. Then it hallucinates, loops infinitely, or silently drops context — and you have **no idea where it went wrong.**
 
-Every other observability tool (LangSmith, Langfuse, Arize) requires accounts, API keys, cloud dashboards, and framework-specific setup. You just want to **see what happened.**
+Every other observability tool requires accounts, API keys, cloud dashboards, and framework-specific setup. You just want to **see what happened.**
 
 ## The Solution
 
 ```python
 import agenttrace.auto  # ← That's it. One line.
 
-# ... your agent code runs normally ...
+# ... your existing agent code runs normally ...
 # When it finishes, a local dashboard opens automatically at localhost:8000
 ```
 
@@ -38,7 +38,7 @@ AgentTrace intercepts every LLM call, tool execution, and unhandled crash — th
 ### 🪄 True Zero-Config
 Add `import agenttrace.auto` to the top of your script. No API keys, no accounts, no cloud. Works with **OpenAI**, **Groq**, **LangChain**, and **CrewAI** out of the box.
 
-### 🧠 Smart Auto-Judge (No Other Tool Does This)
+### 🧠 Smart Auto-Judge
 AgentTrace doesn't just *show* you what happened — it *tells you what went wrong:*
 
 | Evaluation | How It Works | Cost |
@@ -46,22 +46,24 @@ AgentTrace doesn't just *show* you what happened — it *tells you what went wro
 | 🔁 **Loop Detection** | Flags 3+ identical consecutive tool calls | Free (pure Python) |
 | 💰 **Cost Anomaly** | Flags steps using >2x average tokens | Free (pure Python) |
 | ⏱️ **Latency Regression** | Flags steps >3x slower than average | Free (pure Python) |
-| 🔧 **Tool Misuse** | Detects wrong arguments or failed tool calls | LLM-powered |
-| 📝 **Instruction Drift** | Detects when LLM ignores the system prompt | LLM-powered |
+| 🔧 **Tool Misuse** | Detects wrong arguments or failed tool calls | LLM-powered (optional) |
+| 📝 **Instruction Drift** | Detects when LLM ignores the system prompt | LLM-powered (optional) |
+
+> LLM-powered checks require a free [Groq API key](https://console.groq.com). Install with `pip install agenttrace[judge]`.
 
 ### ▶️ Trace Replay
 Press **Play** and watch your agent's execution animate step-by-step — like a video recording of its thought process. Drag the scrubber to jump to any moment. Flagged steps pulse red.
 
 ### 💥 Crash Detection
-If your agent script throws an unhandled exception, AgentTrace catches it via `sys.excepthook` and logs the full Python traceback as a trace step — so you never lose debugging data.
+If your agent throws an unhandled exception, AgentTrace catches it and logs the full traceback as a trace step — so you never lose debugging data.
 
-### 🔌 Framework Integrations
+### 🔌 Framework Support
 | Framework | Status | Setup Required |
 |---|---|---|
-| OpenAI SDK | ✅ Native | None |
-| Groq SDK | ✅ Native | None |
-| LangChain | ✅ Adapter | None |
-| CrewAI | ✅ Adapter | None |
+| OpenAI SDK | ✅ Native | `pip install agenttrace[openai]` |
+| Groq SDK | ✅ Native | `pip install agenttrace[openai]` |
+| LangChain | ✅ Adapter | None (auto-detected) |
+| CrewAI | ✅ Adapter | None (auto-detected) |
 
 ---
 
@@ -70,7 +72,14 @@ If your agent script throws an unhandled exception, AgentTrace catches it via `s
 ### Install
 
 ```bash
+# Core (works with LangChain out of the box)
 pip install -e .
+
+# With OpenAI/Groq support
+pip install -e ".[openai]"
+
+# With everything (OpenAI + Auto-Judge + LangChain)
+pip install -e ".[all]"
 ```
 
 ### Basic Usage (OpenAI / Groq)
@@ -109,7 +118,7 @@ result = chain.invoke({"input": "Explain quantum computing"})
 ### Custom Tool Tracking
 
 ```python
-from agenttrace.decorators import track_tool, track_agent
+from agenttrace import track_tool, track_agent
 
 @track_tool
 def search_database(query: str) -> str:
@@ -133,7 +142,7 @@ Your Agent Script
        │
        ├─── OpenTelemetry TracerProvider
        │         │
-       │         ├── OpenAI Instrumentor (native)
+       │         ├── OpenAI Instrumentor (optional)
        │         ├── LangChain Callback Adapter
        │         └── CrewAI Callback Adapter
        │         │
@@ -183,7 +192,8 @@ agenttrace/
 |---|---|---|
 | `GROQ_API_KEY` | — | Required for LLM-powered judge evaluations |
 | `AGENTTRACE_DB_PATH` | `.agenttrace.db` | Custom database file path |
-| `AGENTTRACE_FULL_PAYLOAD` | — | Set to disable payload truncation |
+| `AGENTTRACE_FULL_PAYLOAD` | `0` | Set to `1` to disable payload truncation |
+| `AGENTTRACE_MAX_CONTENT` | `500` | Max characters before truncation |
 
 ---
 
@@ -194,7 +204,7 @@ We welcome contributions! Here's how to set up the dev environment:
 ```bash
 git clone https://github.com/YOUR_USERNAME/AgentTrace.git
 cd AgentTrace
-pip install -e .
+pip install -e ".[all]"
 
 # Frontend development
 cd ui
@@ -202,6 +212,8 @@ npm install
 npm run dev    # Dev server with hot reload
 npm run build  # Compile to agenttrace/static/
 ```
+
+See [.env.example](.env.example) for required environment variables.
 
 ---
 

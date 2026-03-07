@@ -79,9 +79,12 @@ def init():
         trace.set_tracer_provider(provider)
 
         # Auto-instrument OpenTelemetry for OpenAI (also catches Groq since Groq is an OpenAI SDK wrapper)
-        from opentelemetry.instrumentation.openai import OpenAIInstrumentor
+        try:
+            from opentelemetry.instrumentation.openai import OpenAIInstrumentor
 
-        OpenAIInstrumentor().instrument()
+            OpenAIInstrumentor().instrument()
+        except ImportError:
+            pass  # openai extra not installed, skip native OpenAI instrumentation
 
         # Auto-register external frameworks
         from .integrations import auto_register
