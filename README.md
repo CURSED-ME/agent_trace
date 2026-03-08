@@ -36,7 +36,7 @@ AgentTrace intercepts every LLM call, tool execution, and unhandled crash — th
 ## ✨ Features
 
 ### 🪄 True Zero-Config
-Add `import agenttrace.auto` to the top of your script. No API keys, no accounts, no cloud. Works with **OpenAI**, **Groq**, **LangChain**, and **CrewAI** out of the box.
+Add `import agenttrace.auto` to the top of your script. No API keys, no accounts, no cloud. Works with **OpenAI**, **Groq**, **Anthropic**, **Mistral**, **Google Gemini**, **LangChain**, **CrewAI**, and **15+ more** out of the box.
 
 ### 🧠 Smart Auto-Judge
 AgentTrace doesn't just *show* you what happened — it *tells you what went wrong:*
@@ -58,12 +58,34 @@ Press **Play** and watch your agent's execution animate step-by-step — like a 
 If your agent throws an unhandled exception, AgentTrace catches it and logs the full traceback as a trace step — so you never lose debugging data.
 
 ### 🔌 Framework Support
-| Framework | Status | Setup Required |
+
+#### LLM Providers
+| Provider | Status | Install |
 |---|---|---|
-| OpenAI SDK | ✅ Native | `pip install "agenttrace-ai[openai]"` |
-| Groq SDK | ✅ Native | `pip install "agenttrace-ai[openai]"` |
+| OpenAI | ✅ Native | `pip install "agenttrace-ai[openai]"` |
+| Groq | ✅ Native | `pip install "agenttrace-ai[openai]"` |
+| Anthropic (Claude) | ✅ Native | `pip install "agenttrace-ai[anthropic]"` |
+| Mistral AI | ✅ Native | `pip install "agenttrace-ai[mistral]"` |
+| Google Gemini | ✅ Native | `pip install "agenttrace-ai[google]"` |
+| Cohere | ✅ Native | `pip install "agenttrace-ai[cohere]"` |
+| AWS Bedrock | ✅ Native | `pip install "agenttrace-ai[bedrock]"` |
+| Ollama | ✅ Native | `pip install "agenttrace-ai[ollama]"` |
+| Replicate | ✅ Native | `pip install "agenttrace-ai[all]"` |
+| Together AI | ✅ Native | `pip install "agenttrace-ai[all]"` |
+
+#### Agent Frameworks
+| Framework | Status | Install |
+|---|---|---|
 | LangChain | ✅ Adapter | None (auto-detected) |
 | CrewAI | ✅ Adapter | None (auto-detected) |
+| LlamaIndex | ✅ Native | `pip install "agenttrace-ai[all]"` |
+| Haystack | ✅ Native | `pip install "agenttrace-ai[all]"` |
+
+#### Vector Databases
+| Database | Status | Install |
+|---|---|---|
+| ChromaDB | ✅ Native | `pip install "agenttrace-ai[vectordb]"` |
+| Pinecone | ✅ Native | `pip install "agenttrace-ai[vectordb]"` |
 
 ---
 
@@ -142,9 +164,11 @@ Your Agent Script
        │
        ├─── OpenTelemetry TracerProvider
        │         │
-       │         ├── OpenAI Instrumentor (optional)
-       │         ├── LangChain Callback Adapter
-       │         └── CrewAI Callback Adapter
+       │         ├── OpenAI / Groq Instrumentor
+       │         ├── Anthropic / Mistral / Cohere Instrumentors
+       │         ├── Google Gemini / Bedrock / Ollama Instrumentors
+       │         ├── LangChain / CrewAI Callback Adapters
+       │         └── ChromaDB / Pinecone Vector DB Instrumentors
        │         │
        │         ▼
        │    AgentTraceExporter → SQLite (.agenttrace.db)

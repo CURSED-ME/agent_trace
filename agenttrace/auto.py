@@ -78,13 +78,67 @@ def init():
         provider.add_span_processor(SimpleSpanProcessor(AgentTraceExporter()))
         trace.set_tracer_provider(provider)
 
-        # Auto-instrument OpenTelemetry for OpenAI (also catches Groq since Groq is an OpenAI SDK wrapper)
-        try:
-            from opentelemetry.instrumentation.openai import OpenAIInstrumentor
+        # Auto-instrument all supported AI/ML providers.
+        # Each is guarded: only activates if the user has installed that provider's package.
+        _instrumentors = [
+            (
+                "opentelemetry.instrumentation.openai",
+                "OpenAIInstrumentor",
+            ),  # OpenAI + Groq
+            (
+                "opentelemetry.instrumentation.anthropic",
+                "AnthropicInstrumentor",
+            ),  # Anthropic Claude
+            ("opentelemetry.instrumentation.cohere", "CohereInstrumentor"),  # Cohere
+            (
+                "opentelemetry.instrumentation.mistralai",
+                "MistralAiInstrumentor",
+            ),  # Mistral AI
+            (
+                "opentelemetry.instrumentation.google_generativeai",
+                "GoogleGenerativeAiInstrumentor",
+            ),  # Google Gemini
+            (
+                "opentelemetry.instrumentation.bedrock",
+                "BedrockInstrumentor",
+            ),  # AWS Bedrock
+            (
+                "opentelemetry.instrumentation.replicate",
+                "ReplicateInstrumentor",
+            ),  # Replicate
+            (
+                "opentelemetry.instrumentation.together",
+                "TogetherAiInstrumentor",
+            ),  # Together AI
+            (
+                "opentelemetry.instrumentation.ollama",
+                "OllamaInstrumentor",
+            ),  # Ollama (local models)
+            (
+                "opentelemetry.instrumentation.llamaindex",
+                "LlamaIndexInstrumentor",
+            ),  # LlamaIndex
+            (
+                "opentelemetry.instrumentation.haystack",
+                "HaystackInstrumentor",
+            ),  # Haystack
+            (
+                "opentelemetry.instrumentation.chromadb",
+                "ChromaInstrumentor",
+            ),  # ChromaDB (vector DB)
+            (
+                "opentelemetry.instrumentation.pinecone",
+                "PineconeInstrumentor",
+            ),  # Pinecone (vector DB)
+        ]
 
-            OpenAIInstrumentor().instrument()
-        except ImportError:
-            pass  # openai extra not installed, skip native OpenAI instrumentation
+        for module_path, class_name in _instrumentors:
+            try:
+                module = __import__(module_path, fromlist=[class_name])
+                instrumentor_cls = getattr(module, class_name)
+                instrumentor_cls().instrument()
+            except (ImportError, Exception):
+                pass  # Provider not installed or instrumentor failed, skip silently
 
         # Auto-register external frameworks
         from .integrations import auto_register

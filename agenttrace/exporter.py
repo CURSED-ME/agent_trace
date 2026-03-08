@@ -7,17 +7,22 @@ from .storage import add_step
 class AgentTraceExporter(SpanExporter):
     def export(self, spans):
         for span in spans:
-            # We only want to log LLM calls from semantic conventions or our decorators/integrations
-            is_openai = span.name in [
+            # Accept spans from any supported AI/ML provider
+            is_llm_span = span.name in [
                 "chat.completions.create",
                 "chat.completions.create.stream",
+                "messages.create",  # Anthropic
+                "messages.create.stream",  # Anthropic streaming
             ]
             is_agenttrace = "agenttrace" in span.name or (
                 span.attributes and "agenttrace.type" in span.attributes
             )
-            is_genai = span.attributes and "gen_ai.system" in span.attributes
+            is_genai = span.attributes and any(
+                key.startswith("gen_ai.") or key.startswith("llm.")
+                for key in span.attributes.keys()
+            )
 
-            if not (is_openai or is_agenttrace or is_genai):
+            if not (is_llm_span or is_agenttrace or is_genai):
                 continue
 
             attributes = span.attributes or {}
