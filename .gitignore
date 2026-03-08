@@ -15,8 +15,8 @@ venv/
 .gemini/
 
 # Local test artifacts
+*.log
+*.db
 err.txt
 out.txt
-error.log
-verify_output.log
 quantum_research_report.md
