@@ -11,13 +11,17 @@ import os
 import sqlite3
 
 import pytest
-from dotenv import load_dotenv
 
 # Disable agenttrace auto-server for all tests persistently
 os.environ["AGENTTRACE_NO_SERVER"] = "1"
 
-# Load .env from project root before any test
-load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
+# Load .env from project root before any test (optional — CI won't have dotenv)
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
+except ImportError:
+    pass
 
 
 @pytest.fixture(autouse=True)
