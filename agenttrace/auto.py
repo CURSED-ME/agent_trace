@@ -1,10 +1,15 @@
 import atexit
+import logging
+import os
+import sys
 import threading
 import time
-import sys
 import traceback
-from .models import TraceStep, StepMetrics, StepEvaluation
+
+from .models import StepEvaluation, StepMetrics, TraceStep
 from .storage import add_step
+
+logger = logging.getLogger("agenttrace")
 
 _original_excepthook = sys.excepthook
 
@@ -36,10 +41,21 @@ def crash_handler(exc_type, exc_value, exc_traceback):
 
 
 def _run_server():
+    if (
+        os.environ.get("AGENTTRACE_NO_SERVER") == "1"
+        or os.environ.get("CI") == "true"
+        or os.environ.get("GITHUB_ACTIONS")
+    ):
+        logger.info(
+            "AgentTrace: Skipping dashboard server auto-launch (CI/headless environment detected)."
+        )
+        return
+
     import uvicorn
+
     from .server import app
 
-    print(
+    logger.info(
         "\n✨ AgentTrace: Run complete! Dashboard opened at http://localhost:8000. (Press Ctrl+C to close server and return to terminal)\n"
     )
 
@@ -59,11 +75,11 @@ def _run_server():
     try:
         uvicorn.run(app, host="127.0.0.1", port=8000, log_level="warning")
     except OSError:
-        print(
+        logger.warning(
             "AgentTrace: Dashboard is already running on port 8000 in another process."
         )
     except Exception as e:
-        print(f"AgentTrace: Dashboard failed to start: {e}")
+        logger.error(f"AgentTrace: Dashboard failed to start: {e}")
 
 
 def init():
@@ -72,6 +88,7 @@ def init():
         from opentelemetry import trace
         from opentelemetry.sdk.trace import TracerProvider
         from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+
         from .exporter import AgentTraceExporter
 
         provider = TracerProvider()
@@ -145,9 +162,7 @@ def init():
 
         auto_register()
     except ImportError as e:
-        import warnings
-
-        warnings.warn(
+        logger.warning(
             f"AgentTrace: OTel dependencies missing ({e}). Native LLM tracing disabled."
         )
 

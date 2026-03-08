@@ -10,13 +10,15 @@ to start capturing LangChain LLM calls in the AgentTrace dashboard.
 """
 
 import os
+
 from dotenv import load_dotenv
 
 load_dotenv()
 
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_openai import ChatOpenAI
 from langchain_core.tools import tool
+from langchain_openai import ChatOpenAI
+
 import agenttrace.auto  # noqa: F401  ← MAGIC ZERO-CONFIG IMPORT
 
 

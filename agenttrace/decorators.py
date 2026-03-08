@@ -1,7 +1,8 @@
-from functools import wraps
-import time
 import asyncio
-from .models import TraceStep, StepMetrics
+import time
+from functools import wraps
+
+from .models import StepMetrics, TraceStep
 from .storage import add_step
 
 
@@ -11,13 +12,13 @@ def track_tool(func=None, *, name=None):
     def decorator(f):
         tool_name = name or f.__name__
 
-        if asyncio.iscoroutinefunction(func):
+        if asyncio.iscoroutinefunction(f):
 
-            @wraps(func)
+            @wraps(f)
             async def async_wrapper(*args, **kwargs):
                 start = time.time()
                 try:
-                    result = await func(*args, **kwargs)
+                    result = await f(*args, **kwargs)
                     out = {"result": result}
                 except Exception as e:
                     out = {"error": str(e)}
@@ -38,11 +39,11 @@ def track_tool(func=None, *, name=None):
             return async_wrapper
         else:
 
-            @wraps(func)
+            @wraps(f)
             def sync_wrapper(*args, **kwargs):
                 start = time.time()
                 try:
-                    result = func(*args, **kwargs)
+                    result = f(*args, **kwargs)
                     out = {"result": result}
                 except Exception as e:
                     out = {"error": str(e)}
@@ -73,13 +74,13 @@ def track_agent(func=None, *, name=None):
     def decorator(f):
         agent_name = name or f.__name__
 
-        if asyncio.iscoroutinefunction(func):
+        if asyncio.iscoroutinefunction(f):
 
-            @wraps(func)
+            @wraps(f)
             async def async_wrapper(*args, **kwargs):
                 start = time.time()
                 try:
-                    result = await func(*args, **kwargs)
+                    result = await f(*args, **kwargs)
                     out = {"result": result}
                 except Exception as e:
                     out = {"error": str(e)}
@@ -100,11 +101,11 @@ def track_agent(func=None, *, name=None):
             return async_wrapper
         else:
 
-            @wraps(func)
+            @wraps(f)
             def sync_wrapper(*args, **kwargs):
                 start = time.time()
                 try:
-                    result = func(*args, **kwargs)
+                    result = f(*args, **kwargs)
                     out = {"result": result}
                 except Exception as e:
                     out = {"error": str(e)}

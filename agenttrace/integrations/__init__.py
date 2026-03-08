@@ -7,8 +7,8 @@ Auto-registers zero-config callback handlers for popular agent frameworks.
 def auto_register():
     import sys
 
-    # Check for LangChain
-    if "langchain" in sys.modules:
+    # Check for LangChain (modern usages often only import langchain_core)
+    if "langchain" in sys.modules or "langchain_core" in sys.modules:
         try:
             from .langchain import register_langchain
 

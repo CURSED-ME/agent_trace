@@ -1,10 +1,11 @@
 import os
 import time
 
+import groq
+
 # This automatically watches the script execution
 import agenttrace.auto  # noqa
-import groq
-from agenttrace.decorators import track_tool, track_agent
+from agenttrace.decorators import track_agent, track_tool
 
 
 @track_tool("calculate_math")

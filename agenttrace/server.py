@@ -1,10 +1,15 @@
-import os
 import asyncio
+import logging
+import os
+
 from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
-from .storage import list_traces, get_trace_by_id
+from fastapi.staticfiles import StaticFiles
+
 from .judge import evaluate_trace
+from .storage import get_trace_by_id, list_traces
+
+logger = logging.getLogger("agenttrace")
 
 app = FastAPI()
 
@@ -13,13 +18,29 @@ STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
 
 @app.on_event("startup")
 async def startup_event():
+    # Clean up stale "RUNNING" traces from previous runs
+    from .storage import _db_lock, _get_connection, prune_traces
+
+    try:
+        with _db_lock:
+            conn = _get_connection()
+            conn.execute(
+                "UPDATE traces SET status = 'completed' WHERE status = 'running'"
+            )
+            conn.commit()
+
+        # Enforce trace limit bounds
+        prune_traces()
+    except Exception as e:
+        logger.warning(f"AgentTrace: Failed to clean up stale traces: {e}")
+
     # evaluate traces continuously in the background
     async def judge_loop():
         while True:
             try:
                 await evaluate_trace()
             except Exception as e:
-                print(f"Judge error: {e}")
+                logger.error(f"Judge error: {e}")
             await asyncio.sleep(5)
 
     asyncio.create_task(judge_loop())
@@ -46,6 +67,18 @@ def get_trace(trace_id: str):
     if not trace:
         return JSONResponse(status_code=404, content={"error": "Trace not found"})
     return JSONResponse(content={"trace": trace.model_dump(mode="json")})
+
+
+@app.delete("/api/traces/clear")
+def clear_traces():
+    from .storage import clear_all_traces
+
+    try:
+        clear_all_traces()
+        return JSONResponse(content={"status": "success"})
+    except Exception as e:
+        logger.error(f"Failed to clear traces: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
 
 
 # Mount static files correctly

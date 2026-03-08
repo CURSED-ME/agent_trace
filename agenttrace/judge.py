@@ -1,9 +1,13 @@
-import os
-import json
 import asyncio
+import json
+import logging
+import os
 from typing import List
-from .storage import _get_connection, _db_lock, update_step, get_trace_by_id
-from .models import TraceStep, AgentTrace
+
+from .models import AgentTrace, TraceStep
+from .storage import _db_lock, _get_connection, get_trace_by_id, update_step
+
+logger = logging.getLogger("agenttrace")
 
 
 class JudgeEngine:
@@ -42,7 +46,7 @@ class JudgeEngine:
             try:
                 import groq
             except ImportError:
-                print(
+                logger.warning(
                     "AgentTrace Judge: groq package not installed. Install with: pip install agenttrace[judge]"
                 )
                 self.api_key = None
@@ -59,7 +63,9 @@ class JudgeEngine:
             if tasks:
                 await asyncio.gather(*tasks)
         else:
-            print("AgentTrace Judge: No GROQ_API_KEY found. Skipping LLM evaluations.")
+            logger.info(
+                "AgentTrace Judge: No GROQ_API_KEY found. Skipping LLM evaluations."
+            )
 
         # Finalize pending steps
         for step in pending_steps:

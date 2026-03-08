@@ -69,3 +69,12 @@ include-package-data = true
 
 [tool.setuptools.package-data]
 agenttrace = ["static/**", "static/*"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = ["E501", "E402"]  # Ignore line too long (handled by formatter), allow deferred imports
+

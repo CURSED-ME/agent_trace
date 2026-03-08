@@ -1,6 +1,7 @@
-from agenttrace.models import TraceStep, StepMetrics
-from agenttrace.storage import add_step, get_current_trace
 import time
+
+from agenttrace.models import StepMetrics, TraceStep
+from agenttrace.storage import add_step, get_current_trace
 
 
 def simulate_bad_agent():

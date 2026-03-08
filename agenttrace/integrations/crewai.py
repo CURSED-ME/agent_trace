@@ -1,5 +1,6 @@
-from opentelemetry import trace
 from typing import Any
+
+from opentelemetry import trace
 
 tracer = trace.get_tracer(__name__)
 

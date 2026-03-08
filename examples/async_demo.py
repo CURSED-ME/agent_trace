@@ -1,9 +1,8 @@
-import os
 import asyncio
-from dotenv import load_dotenv
+import os
 
-import agenttrace.auto
 import groq
+from dotenv import load_dotenv
 
 load_dotenv()
 api_key = os.environ.get("GROQ_API_KEY")

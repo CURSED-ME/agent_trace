@@ -1,26 +1,26 @@
-import os
+import contextvars
 import json
+import os
 import sqlite3
 import threading
-import contextvars
 from datetime import datetime
-from .models import AgentTrace, TraceStep, StepMetrics, StepEvaluation
+
+from .models import AgentTrace, StepEvaluation, StepMetrics, TraceStep
 from .utils import truncate_payload
 
 DB_PATH = os.environ.get("AGENTTRACE_DB_PATH", ".agenttrace.db")
 
 _db_lock = threading.Lock()
-_connection = None
+_local = threading.local()
 
 
 def _get_connection():
-    global _connection
-    if _connection is None:
-        _connection = sqlite3.connect(DB_PATH, check_same_thread=False)
-        _connection.execute("PRAGMA journal_mode=WAL")
-        _connection.execute("PRAGMA busy_timeout=5000")
-        _connection.row_factory = sqlite3.Row
-    return _connection
+    if not hasattr(_local, "connection"):
+        _local.connection = sqlite3.connect(DB_PATH, check_same_thread=False)
+        _local.connection.execute("PRAGMA journal_mode=WAL")
+        _local.connection.execute("PRAGMA busy_timeout=5000")
+        _local.connection.row_factory = sqlite3.Row
+    return _local.connection
 
 
 def init_db():
@@ -121,7 +121,55 @@ def get_current_trace() -> AgentTrace:
 
 
 def clear_trace():
+    trace_id = _trace_id_var.get()
+    if trace_id:
+        update_trace_status(trace_id, "completed")
     _trace_id_var.set(None)
+
+
+def update_trace_status(trace_id: str, status: str):
+    """Mark a trace as running, completed, or error."""
+    with _db_lock:
+        conn = _get_connection()
+        conn.execute(
+            "UPDATE traces SET status = ? WHERE trace_id = ?", (status, trace_id)
+        )
+        conn.commit()
+
+
+def prune_traces():
+    """Keep only the latest AGENTTRACE_MAX_TRACES in the database."""
+    max_traces = int(os.environ.get("AGENTTRACE_MAX_TRACES", "100"))
+    if max_traces <= 0:
+        return
+
+    with _db_lock:
+        conn = _get_connection()
+        conn.execute(
+            """
+            DELETE FROM traces WHERE trace_id NOT IN (
+                SELECT trace_id FROM traces ORDER BY timestamp DESC LIMIT ?
+            )
+            """,
+            (max_traces,),
+        )
+        conn.execute(
+            """
+            DELETE FROM steps WHERE trace_id NOT IN (
+                SELECT trace_id FROM traces
+            )
+            """
+        )
+        conn.commit()
+
+
+def clear_all_traces():
+    """Manually delete all traces and steps from the database."""
+    with _db_lock:
+        conn = _get_connection()
+        conn.execute("DELETE FROM steps")
+        conn.execute("DELETE FROM traces")
+        conn.commit()
 
 
 def add_step(step: TraceStep):
@@ -239,3 +287,48 @@ def get_all_traces():
     # Only returns the current trace for MVP compatibility. Use list_traces instead.
     trace = get_current_trace()
     return [trace] if trace else []
+
+
+def add_step_with_trace_id(step: TraceStep, trace_id: str):
+    """Append a step to a specific trace by ID, bypassing ContextVars. Used by exporters."""
+    safe_inputs = json.dumps(truncate_payload(step.inputs))
+    safe_outputs = json.dumps(truncate_payload(step.outputs))
+
+    with _db_lock:
+        conn = _get_connection()
+
+        # Ensure the trace exists
+        row = conn.execute(
+            "SELECT trace_id FROM traces WHERE trace_id = ?", (trace_id,)
+        ).fetchone()
+        if not row:
+            t = AgentTrace(
+                trace_id=trace_id,
+                timestamp=datetime.now(),
+                status="running",
+                steps=[],
+            )
+            conn.execute(
+                "INSERT INTO traces (trace_id, timestamp, status) VALUES (?, ?, ?)",
+                (t.trace_id, t.timestamp.isoformat(), t.status),
+            )
+
+        # Insert the step
+        conn.execute(
+            """
+            INSERT INTO steps (step_id, trace_id, type, name, inputs, outputs, metrics, evaluation, timestamp)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+            (
+                step.step_id,
+                trace_id,
+                step.type,
+                step.name,
+                safe_inputs,
+                safe_outputs,
+                step.metrics.model_dump_json(),
+                step.evaluation.model_dump_json(),
+                step.timestamp.isoformat(),
+            ),
+        )
+        conn.commit()

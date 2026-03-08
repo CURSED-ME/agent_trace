@@ -13,3 +13,10 @@ build/
 .venv/
 venv/
 .gemini/
+
+# Local test artifacts
+err.txt
+out.txt
+error.log
+verify_output.log
+quantum_research_report.md
