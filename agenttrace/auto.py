@@ -12,6 +12,7 @@ from .storage import add_step
 logger = logging.getLogger("agenttrace")
 
 _original_excepthook = sys.excepthook
+_initialized = False
 
 
 def crash_handler(exc_type, exc_value, exc_traceback):
@@ -83,6 +84,11 @@ def _run_server():
 
 
 def init():
+    global _initialized
+    if _initialized:
+        return
+    _initialized = True
+
     # Set up OpenTelemetry
     try:
         from opentelemetry import trace
@@ -154,8 +160,11 @@ def init():
                 module = __import__(module_path, fromlist=[class_name])
                 instrumentor_cls = getattr(module, class_name)
                 instrumentor_cls().instrument()
-            except (ImportError, Exception):
-                pass  # Provider not installed or instrumentor failed, skip silently
+            except ImportError:
+                pass  # Provider not installed, skip silently
+            except Exception as e:
+                print(f"DEBUG: Instrumentor {class_name} failed: {e}")
+                logger.debug(f"AgentTrace: Failed to initialize instrumentor {class_name}: {e}")
 
         # Auto-register external frameworks
         from .integrations import auto_register
@@ -166,8 +175,11 @@ def init():
             f"AgentTrace: OTel dependencies missing ({e}). Native LLM tracing disabled."
         )
 
-    sys.excepthook = crash_handler
-    atexit.register(_run_server)
+    if os.environ.get("AGENTTRACE_NO_EXCEPTHOOK") != "1":
+        sys.excepthook = crash_handler
+
+    if os.environ.get("AGENTTRACE_NO_SERVER") != "1":
+        atexit.register(_run_server)
 
 
 init()

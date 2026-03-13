@@ -1,4 +1,5 @@
+from .auto import init
 from .decorators import track_agent, track_tool
 
 __version__ = "0.1.0"
-__all__ = ["track_tool", "track_agent"]
+__all__ = ["track_tool", "track_agent", "init"]

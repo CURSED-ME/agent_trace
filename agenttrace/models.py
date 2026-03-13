@@ -18,6 +18,7 @@ class StepEvaluation(BaseModel):
 
 class TraceStep(BaseModel):
     step_id: str = Field(default_factory=lambda: "step_" + uuid.uuid4().hex[:8])
+    parent_id: Optional[str] = None  # Added for OTLP context propagation
     type: str  # llm_call, tool_execution, system_prompt
     name: str
     inputs: Dict[str, Any]

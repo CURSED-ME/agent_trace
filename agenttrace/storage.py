@@ -36,6 +36,7 @@ def init_db():
         conn.execute("""
             CREATE TABLE IF NOT EXISTS steps (
                 step_id TEXT PRIMARY KEY,
+                parent_id TEXT,
                 trace_id TEXT,
                 type TEXT,
                 name TEXT,
@@ -47,6 +48,11 @@ def init_db():
                 FOREIGN KEY(trace_id) REFERENCES traces(trace_id)
             )
         """)
+        # Basic migration for existing tables
+        try:
+            conn.execute("ALTER TABLE steps ADD COLUMN parent_id TEXT")
+        except sqlite3.OperationalError:
+            pass  # column already exists
         conn.commit()
 
 
@@ -107,6 +113,7 @@ def get_current_trace() -> AgentTrace:
         for s_row in steps_rows:
             step = TraceStep(
                 step_id=s_row["step_id"],
+                parent_id=s_row["parent_id"] if "parent_id" in s_row.keys() else None,
                 type=s_row["type"],
                 name=s_row["name"],
                 inputs=json.loads(s_row["inputs"]),
@@ -184,11 +191,12 @@ def add_step(step: TraceStep):
         conn = _get_connection()
         conn.execute(
             """
-            INSERT INTO steps (step_id, trace_id, type, name, inputs, outputs, metrics, evaluation, timestamp)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO steps (step_id, parent_id, trace_id, type, name, inputs, outputs, metrics, evaluation, timestamp)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
             (
                 step.step_id,
+                step.parent_id,
                 trace.trace_id,
                 step.type,
                 step.name,
@@ -270,6 +278,7 @@ def get_trace_by_id(trace_id: str):
         for s_row in steps_rows:
             step = TraceStep(
                 step_id=s_row["step_id"],
+                parent_id=s_row["parent_id"] if "parent_id" in s_row.keys() else None,
                 type=s_row["type"],
                 name=s_row["name"],
                 inputs=json.loads(s_row["inputs"]),
@@ -316,11 +325,12 @@ def add_step_with_trace_id(step: TraceStep, trace_id: str):
         # Insert the step
         conn.execute(
             """
-            INSERT INTO steps (step_id, trace_id, type, name, inputs, outputs, metrics, evaluation, timestamp)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO steps (step_id, parent_id, trace_id, type, name, inputs, outputs, metrics, evaluation, timestamp)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
             (
                 step.step_id,
+                step.parent_id,
                 trace_id,
                 step.type,
                 step.name,
