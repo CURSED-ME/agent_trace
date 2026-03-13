@@ -170,7 +170,7 @@ async function main() {
 main();
 ```
 
-### Custom Tool Tracking
+### Custom Tool Tracking (Python)
 
 ```python
 from agenttrace import track_tool, track_agent
@@ -183,6 +183,21 @@ def search_database(query: str) -> str:
 def my_agent(task: str) -> str:
     data = search_database(task)
     return llm.complete(f"Answer based on: {data}")
+```
+
+### Custom Tool Tracking (Node.js)
+
+```typescript
+import { trackAgent, trackTool } from "agenttrace-node";
+
+const getWeather = trackTool("getWeather", async (location: string) => {
+  return await fetchWeatherApi(location);
+});
+
+const myAgent = trackAgent("myAgent", async (query: string) => {
+  const data = await getWeather("San Francisco");
+  // ... call LLM with data
+});
 ```
 
 ---

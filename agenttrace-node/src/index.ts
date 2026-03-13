@@ -65,3 +65,5 @@ export async function shutdown() {
     }
   }
 }
+
+export { trackAgent, trackTool } from './decorators';

@@ -19,11 +19,24 @@
   "keywords": [
     "agenttrace",
     "opentelemetry",
-    "tracing"
+    "tracing",
+    "llm",
+    "ai",
+    "observability"
   ],
-  "author": "",
+  "author": "AgentTrace",
   "license": "Apache-2.0",
-  "description": "Language-agnostic Node.js SDK for AgentTrace",
+  "description": "The official Language-Agnostic Node.js SDK for AgentTrace. Zero-config visual debugging for LLM agents.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/CURSED-ME/AgentTrace.git",
+    "directory": "agenttrace-node"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "package.json"
+  ],
   "dependencies": {
     "@opentelemetry/api": "^1.9.0",
     "@opentelemetry/auto-instrumentations-node": "^0.71.0",
