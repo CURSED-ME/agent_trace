@@ -137,6 +137,39 @@ result = chain.invoke({"input": "Explain quantum computing"})
 # All LLM calls automatically appear in the AgentTrace dashboard
 ```
 
+### Node.js & TypeScript SDK
+
+AgentTrace now natively supports Javascript/Typescript AI agents via the `@opentelemetry` standard!
+
+**1. Install the SDK:**
+```bash
+npm install agenttrace-node
+```
+
+**2. Initialize tracking at the top of your index file:**
+```typescript
+import { init, shutdown } from "agenttrace-node";
+import { OpenAI } from "openai";
+
+// 1. Initialize OTLP tracer
+init({
+  serviceName: "my-ai-agent"
+});
+
+const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+async function main() {
+  const response = await client.chat.completions.create({
+    model: "gpt-4o",
+    messages: [{ role: "user", content: "Hello!" }]
+  });
+  
+  // 2. Gracefully flush traces before the Node event loop exits
+  await shutdown(); 
+}
+main();
+```
+
 ### Custom Tool Tracking
 
 ```python
