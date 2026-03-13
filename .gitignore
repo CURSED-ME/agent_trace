@@ -1,20 +1,30 @@
+# Build and dependency directories
 node_modules/
-.env
-__pycache__/
-*.pyc
-agenttrace.egg-info/
-ui/dist/
-.agenttrace.db
-.agenttrace.db-shm
-.agenttrace.db-wal
 dist/
 build/
 *.egg-info/
+agenttrace.egg-info/
+ui/dist/
+
+# Environment and secrets
+.env
+.env.example
+
+# Python runtime
+__pycache__/
+*.pyc
 .venv/
 venv/
-.gemini/
 
-# Local test artifacts
+# IDE and tooling
+.gemini/
+.agenttrace.db
+.agenttrace.db-shm
+.agenttrace.db-wal
+.pytest_cache/
+.ruff_cache/
+
+# Local workspace and temporary artifacts
 *.log
 *.db
 err.txt
