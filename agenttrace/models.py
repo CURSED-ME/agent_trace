@@ -23,6 +23,8 @@ class TraceStep(BaseModel):
     name: str
     inputs: Dict[str, Any]
     outputs: Dict[str, Any]
+    error: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
     metrics: StepMetrics = Field(default_factory=StepMetrics)
     evaluation: StepEvaluation = Field(default_factory=StepEvaluation)
     timestamp: datetime = Field(default_factory=datetime.utcnow)

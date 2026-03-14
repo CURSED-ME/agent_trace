@@ -8,7 +8,6 @@ ui/dist/
 
 # Environment and secrets
 .env
-.env.example
 
 # Python runtime
 __pycache__/
@@ -27,7 +26,4 @@ venv/
 # Local workspace and temporary artifacts
 *.log
 *.db
-err.txt
-out.txt
-quantum_research_report.md
-memory_*.md
+.memory/

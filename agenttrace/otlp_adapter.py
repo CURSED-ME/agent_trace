@@ -40,26 +40,27 @@ def process_span(
         ]
         is_agenttrace = "agenttrace" in name or "agenttrace.type" in attributes
         is_genai = any(
-            key.startswith("gen_ai.") or key.startswith("llm.")
+            key.startswith("gen_ai.") or key.startswith("llm.") or key.startswith("ai.")
             for key in attributes.keys()
         )
+        is_vercel_ai = name.startswith("ai.")
 
-        if not (is_llm_span or is_agenttrace or is_genai):
+        if not (is_llm_span or is_agenttrace or is_genai or is_vercel_ai):
             return None
 
-        # Extract GenAI semantic conventions (fallback to empty if not found)
+        # Extract GenAI semantic conventions (fallback to Vercel formats if not found)
         # Handle variations between Node.js and Python OTel instrumentations
-        system = _get_attribute(attributes, ["gen_ai.system", "llm.system"], "unknown")
+        system = _get_attribute(attributes, ["gen_ai.system", "llm.system", "ai.model.provider"], "unknown")
         model = _get_attribute(
             attributes,
-            ["gen_ai.request.model", "llm.request.model", "llm.model_name"],
+            ["gen_ai.request.model", "llm.request.model", "llm.model_name", "ai.model.id"],
             "unknown",
         )
         input_tokens = _get_attribute(
-            attributes, ["gen_ai.usage.input_tokens", "llm.usage.prompt_tokens"], 0
+            attributes, ["gen_ai.usage.input_tokens", "llm.usage.prompt_tokens", "ai.usage.promptTokens", "ai.usage.inputTokens"], 0
         )
         output_tokens = _get_attribute(
-            attributes, ["gen_ai.usage.output_tokens", "llm.usage.completion_tokens"], 0
+            attributes, ["gen_ai.usage.output_tokens", "llm.usage.completion_tokens", "ai.usage.completionTokens", "ai.usage.outputTokens"], 0
         )
         total_tokens = input_tokens + output_tokens
 
@@ -72,6 +73,20 @@ def process_span(
             step_type = attributes.get("agenttrace.type")
             step_name = name.replace("agenttrace.", "")
 
+        # Handle Vercel outer wrapper spans (like ai.generateText, ai.streamText)
+        # Tested against Vercel AI SDK v3.4.0+ & ai@6.0+ experimental telemetry
+        if is_vercel_ai and not name.endswith(".doGenerate") and not name.endswith(".doStream"):
+            step_type = "tool"
+            step_name = attributes.get("ai.telemetry.functionId", name)
+            if attributes.get("ai.telemetry.metadata.agent"):
+                step_type = "agent"
+                step_name = attributes.get("ai.telemetry.metadata.agent")
+
+        # Handle Vercel inner tool span
+        if name == "ai.toolCall":
+            step_type = "tool"
+            step_name = attributes.get("ai.toolCall.name", "unknown_tool")
+
         # Filter out LangGraph internal orchestration chains from clogging the UI
         if step_type == "chain" and step_name == "langgraph.chain":
             return None
@@ -81,8 +96,8 @@ def process_span(
             latency_ms = int((end_time_unix_nano - start_time_unix_nano) / 1000000)
 
         # Try to extract prompts & completions
-        inputs = {"model": model, "messages": []}
-        outputs = {"content": ""}
+        inputs: dict = {"model": model, "messages": []}
+        outputs: dict = {"content": ""}
 
         # Check if inputs/outputs were set via attributes (like our LangChain adapter does)
         if "agenttrace.inputs" in attributes:
@@ -100,24 +115,26 @@ def process_span(
                     {"content": evt_attributes.get("gen_ai.prompt")}
                 )
             elif evt_name == "gen_ai.content.completion":
-                outputs["content"] += evt_attributes.get("gen_ai.completion", "")
+                outputs["content"] += str(evt_attributes.get("gen_ai.completion", ""))
             elif evt_name == "agenttrace.inputs":
                 payload = evt_attributes.get("payload", "{}")
                 if isinstance(payload, str):
                     try:
-                        inputs = json.loads(payload)
+                        parsed = json.loads(payload)
+                        inputs = parsed if isinstance(parsed, dict) else {"raw": parsed}
                     except json.JSONDecodeError:
                         inputs = {"raw": payload}
-                else:
+                elif isinstance(payload, dict):
                     inputs = payload
             elif evt_name == "agenttrace.outputs":
                 payload = evt_attributes.get("payload", "{}")
                 if isinstance(payload, str):
                     try:
-                        outputs = json.loads(payload)
+                        parsed = json.loads(payload)
+                        outputs = parsed if isinstance(parsed, dict) else {"raw": parsed}
                     except json.JSONDecodeError:
                         outputs = {"raw": payload}
-                else:
+                elif isinstance(payload, dict):
                     outputs = payload
             elif evt_name == "exception":
                 outputs = {
@@ -125,19 +142,53 @@ def process_span(
                     "stacktrace": evt_attributes.get("exception.stacktrace"),
                 }
 
-        # Fallback for older semantic conventions
-        if not inputs["messages"] and not attributes.get("agenttrace.type"):
-            inputs["messages"] = [
-                {"content": attributes.get("gen_ai.prompt.0.content", "...")}
-            ]
-            outputs["content"] = attributes.get("gen_ai.completion.0.content", "...")
+        # Fallback for older semantic conventions or Vercel specific keys
+        if "messages" in inputs and getattr(inputs, "get", lambda x, y: None)("messages") == [] and not attributes.get("agenttrace.type"):
+            prompt_content = _get_attribute(attributes, ["gen_ai.prompt.0.content", "ai.prompt.messages", "ai.prompt"])
+            if prompt_content:
+                inputs["messages"] = [{"content": prompt_content}]
+
+            completion_content = _get_attribute(attributes, ["gen_ai.completion.0.content", "ai.response.text"])
+            if completion_content:
+                outputs["content"] = completion_content
+
+        # Extract Vercel Tool Call payload
+        if name == "ai.toolCall":
+            ai_args = attributes.get("ai.toolCall.args")
+            if ai_args:
+                try:
+                    inputs = json.loads(ai_args)
+                except json.JSONDecodeError:
+                    inputs = {"raw_args": ai_args}
+
+            ai_result = attributes.get("ai.toolCall.result")
+            if ai_result:
+                try:
+                    outputs = json.loads(ai_result)
+                except json.JSONDecodeError:
+                    outputs = {"raw_result": ai_result}
+
+        # Extract telemetry metadata
+        metadata = None
+        ai_metadata = {k.replace("ai.telemetry.metadata.", ""): v for k, v in attributes.items() if k.startswith("ai.telemetry.metadata.")}
+        if ai_metadata:
+            metadata = ai_metadata
+
+        # Extract Error status explicitly if not captured by events
+        error_msg = None
+        if "error" in outputs:
+            error_msg = outputs["error"]
+        elif attributes.get("status.code") == 2: # OTel ERROR code
+            error_msg = attributes.get("status.message", "Unknown Span Error")
 
         step = TraceStep(
-            id=span_id_hex,
+            step_id=span_id_hex,
             type=step_type,
             name=step_name,
             inputs=inputs,
             outputs=outputs,
+            error=error_msg,
+            metadata=metadata,
             metrics=StepMetrics(latency_ms=latency_ms, tokens_total=total_tokens),
         )
 

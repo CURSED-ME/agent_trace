@@ -36,7 +36,7 @@ AgentTrace intercepts every LLM call, tool execution, and unhandled crash — th
 ## ✨ Features
 
 ### 🪄 True Zero-Config
-Add `import agenttrace.auto` to the top of your script. No API keys, no accounts, no cloud. Works with **OpenAI**, **Groq**, **Anthropic**, **Mistral**, **Google Gemini**, **LangChain**, **CrewAI**, and **15+ more** out of the box.
+Add `import agenttrace.auto` to the top of your script. No API keys, no accounts, no cloud. Works with **OpenAI**, **Groq**, **Anthropic**, **Mistral**, **Google Gemini**, **LangChain**, **CrewAI**, **Vercel AI SDK**, and **15+ more** out of the box.
 
 ### 🧠 Smart Auto-Judge
 AgentTrace doesn't just *show* you what happened — it *tells you what went wrong:*
@@ -78,6 +78,7 @@ If your agent throws an unhandled exception, AgentTrace catches it and logs the 
 |---|---|---|
 | LangChain | ✅ Adapter | None (auto-detected) |
 | CrewAI | ✅ Adapter | None (auto-detected) |
+| Vercel AI SDK | ✅ Experimental | `npm install agenttrace-node ai` |
 | LlamaIndex | ✅ Native | `pip install "agenttrace-ai[all]"` |
 | Haystack | ✅ Native | `pip install "agenttrace-ai[all]"` |
 
@@ -94,14 +95,17 @@ If your agent throws an unhandled exception, AgentTrace catches it and logs the 
 ### Install
 
 ```bash
-# Core (works with LangChain out of the box)
+# Python — Core (works with LangChain out of the box)
 pip install agenttrace-ai
 
-# With OpenAI/Groq support
+# Python — With OpenAI/Groq support
 pip install "agenttrace-ai[openai]"
 
-# With everything (OpenAI + Auto-Judge + LangChain)
+# Python — With everything (OpenAI + Auto-Judge + LangChain)
 pip install "agenttrace-ai[all]"
+
+# Node.js / TypeScript
+npm install agenttrace-node
 ```
 
 ### Basic Usage (OpenAI / Groq)
@@ -170,6 +174,36 @@ async function main() {
 main();
 ```
 
+**3. Vercel AI SDK Integration (Experimental):**
+AgentTrace supports the [Vercel AI SDK](https://sdk.vercel.ai/) out of the box by leveraging its `experimental_telemetry` flag. Tool calls, streaming responses, and custom metadata are all captured automatically.
+
+> **Note:** Vercel's telemetry API is marked as experimental and may change between SDK versions. AgentTrace is tested against `ai@6.0+`.
+
+```typescript
+import { init, shutdown } from "agenttrace-node";
+import { generateText } from "ai";
+import { openai } from "@ai-sdk/openai";
+
+// 1. Initialize OTLP tracer
+init({ serviceName: "vercel-ai-agent" });
+
+async function main() {
+  const { text } = await generateText({
+    model: openai("gpt-4o"),
+    prompt: "Write a short poem about space.",
+    experimental_telemetry: {
+      isEnabled: true,
+      functionId: "space-poet",
+      metadata: { agent: "SpaceAgent" } // Appears as agent name in AgentTrace UI
+    }
+  });
+  
+  // 2. Flush traces
+  await shutdown();
+}
+main();
+```
+
 ### Custom Tool Tracking (Python)
 
 ```python
@@ -205,28 +239,30 @@ const myAgent = trackAgent("myAgent", async (query: string) => {
 ## 🏗️ Architecture
 
 ```
-Your Agent Script
+Your Agent Script (Python or Node.js)
        │
        ▼
-  import agenttrace.auto
+  import agenttrace.auto          // or: import { init } from "agenttrace-node"
        │
        ├─── OpenTelemetry TracerProvider
        │         │
        │         ├── OpenAI / Groq Instrumentor
        │         ├── Anthropic / Mistral / Cohere Instrumentors
        │         ├── Google Gemini / Bedrock / Ollama Instrumentors
+       │         ├── Vercel AI SDK (experimental_telemetry)
        │         ├── LangChain / CrewAI Callback Adapters
        │         └── ChromaDB / Pinecone Vector DB Instrumentors
        │         │
        │         ▼
-       │    AgentTraceExporter → SQLite (.agenttrace.db)
+       │    OTLP Adapter → SQLite (.agenttrace.db)
        │
-       ├─── sys.excepthook → Crash capture
+       ├─── sys.excepthook → Crash capture (Python)
        │
        └─── atexit → FastAPI Server (localhost:8000)
                          │
-                         ├── /api/traces
-                         ├── /api/trace/{id}
+                         ├── POST /v1/traces  (OTLP ingestion)
+                         ├── GET  /api/traces
+                         ├── GET  /api/trace/{id}
                          └── React Dashboard (Vite + Tailwind)
 ```
 
@@ -241,19 +277,25 @@ Your Agent Script
 ## 📁 Project Structure
 
 ```
-agenttrace/
-├── auto.py              # Zero-config entry point (import this)
-├── exporter.py          # OTel SpanExporter → SQLite
-├── judge.py             # Smart Auto-Judge engine (5 eval types)
-├── models.py            # Pydantic data models
-├── storage.py           # SQLite with WAL mode
-├── server.py            # FastAPI dashboard server
-├── decorators.py        # @track_tool, @track_agent
-├── utils.py             # Payload truncation
+agenttrace/                      # Python backend
+├── auto.py                      # Zero-config entry point (import this)
+├── exporter.py                  # OTel SpanExporter → SQLite
+├── otlp_adapter.py              # OTLP span normalizer (Vercel, OpenAI, etc.)
+├── judge.py                     # Smart Auto-Judge engine (5 eval types)
+├── models.py                    # Pydantic data models
+├── storage.py                   # SQLite with WAL mode
+├── server.py                    # FastAPI dashboard server + OTLP ingestion
+├── decorators.py                # @track_tool, @track_agent
+├── utils.py                     # Payload truncation
 ├── integrations/
-│   ├── langchain.py     # LangChain callback adapter
-│   └── crewai.py        # CrewAI callback adapter
-└── static/              # Pre-compiled React dashboard
+│   ├── langchain.py             # LangChain callback adapter
+│   └── crewai.py                # CrewAI callback adapter
+└── static/                      # Pre-compiled React dashboard
+
+agenttrace-node/                 # Node.js / TypeScript SDK
+├── src/index.ts                 # init(), shutdown(), trackTool(), trackAgent()
+├── examples/                    # OpenAI, Vercel AI SDK examples
+└── package.json
 ```
 
 ---
