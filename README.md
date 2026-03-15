@@ -6,6 +6,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![Go 1.21+](https://img.shields.io/badge/go-1.21+-00ADD8.svg)](https://go.dev/)
 [![OpenTelemetry](https://img.shields.io/badge/OpenTelemetry-native-blueviolet)](https://opentelemetry.io/)
 
 *One import. Zero config. Instant visual timeline of every LLM call, tool execution, and crash your agent makes.*
@@ -106,6 +107,9 @@ pip install "agenttrace-ai[all]"
 
 # Node.js / TypeScript
 npm install agenttrace-node
+
+# Go
+go get github.com/CURSED-ME/AgentTrace/agenttrace-go
 ```
 
 ### Basic Usage (OpenAI / Groq)
@@ -234,6 +238,32 @@ const myAgent = trackAgent("myAgent", async (query: string) => {
 });
 ```
 
+### Go SDK
+
+```go
+package main
+
+import (
+    "context"
+    "log"
+    "github.com/CURSED-ME/AgentTrace/agenttrace-go"
+)
+
+func main() {
+    agenttrace.Init(agenttrace.WithServiceName("my-go-agent"))
+    defer agenttrace.Shutdown(context.Background())
+
+    agenttrace.TrackAgent(context.Background(), "research_agent", func(ctx context.Context) error {
+        return agenttrace.TrackTool(ctx, "fetch_data", func(ctx context.Context) error {
+            // your tool logic here
+            return nil
+        })
+    })
+}
+```
+
+> For auto-instrumented OpenAI calls in Go, wrap your HTTP client with `openai.RoundTripper` — see [`examples/basic_openai`](agenttrace-go/examples/basic_openai/main.go).
+
 ---
 
 ## 🏗️ Architecture
@@ -243,6 +273,7 @@ Your Agent Script (Python or Node.js)
        │
        ▼
   import agenttrace.auto          // or: import { init } from "agenttrace-node"
+       │                          // or: agenttrace.Init() (Go)
        │
        ├─── OpenTelemetry TracerProvider
        │         │
@@ -296,6 +327,12 @@ agenttrace-node/                 # Node.js / TypeScript SDK
 ├── src/index.ts                 # init(), shutdown(), trackTool(), trackAgent()
 ├── examples/                    # OpenAI, Vercel AI SDK examples
 └── package.json
+
+agenttrace-go/                   # Go SDK
+├── agenttrace.go                # Init(), Shutdown(), TrackAgent(), TrackTool()
+├── instrumentation/openai/      # http.RoundTripper auto-instrumentation
+├── examples/                    # OpenAI, custom tools examples
+└── go.mod
 ```
 
 ---
