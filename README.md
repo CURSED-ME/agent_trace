@@ -58,6 +58,24 @@ Press **Play** and watch your agent's execution animate step-by-step — like a 
 ### 💥 Crash Detection
 If your agent throws an unhandled exception, AgentTrace catches it and logs the full traceback as a trace step — so you never lose debugging data.
 
+### 🔗 Session Tracing
+Group related traces into **sessions** for multi-turn agent workflows. Tag traces with custom key-value pairs for filtering and organization:
+
+```python
+import os
+os.environ["AGENTTRACE_SESSION_ID"] = "user-123-conversation"
+os.environ["AGENTTRACE_TAGS"] = "env=prod,agent=support"
+```
+
+### 🔀 Trace Comparison (Diff Mode)
+Select any two traces and **diff them side-by-side**. AgentTrace uses an LCS-based algorithm to classify each step as added, removed, changed, or unchanged — with a metrics delta bar showing differences in tokens, latency, and step count.
+
+### 📦 Evaluation Datasets
+Build golden test datasets directly from your traces:
+- **Save** individual LLM call inputs/outputs to a dataset with one click
+- **Batch import** all traces from a session or tag filter
+- **Export** datasets as `.jsonl` for use in fine-tuning or CI evaluation pipelines
+
 ### 🔌 Framework Support
 
 #### LLM Providers
@@ -291,9 +309,14 @@ Your Agent Script (Python or Node.js)
        │
        └─── atexit → FastAPI Server (localhost:8000)
                          │
-                         ├── POST /v1/traces  (OTLP ingestion)
+                         ├── POST /v1/traces       (OTLP ingestion)
                          ├── GET  /api/traces
                          ├── GET  /api/trace/{id}
+                         ├── GET  /api/sessions
+                         ├── GET  /api/traces/compare
+                         ├── GET  /api/datasets
+                         ├── POST /api/datasets/{id}/batch
+                         ├── GET  /api/datasets/{id}/export
                          └── React Dashboard (Vite + Tailwind)
 ```
 
@@ -345,6 +368,9 @@ agenttrace-go/                   # Go SDK
 | `AGENTTRACE_DB_PATH` | `.agenttrace.db` | Custom database file path |
 | `AGENTTRACE_FULL_PAYLOAD` | `0` | Set to `1` to disable payload truncation |
 | `AGENTTRACE_MAX_CONTENT` | `500` | Max characters before truncation |
+| `AGENTTRACE_SESSION_ID` | — | Group traces under a session identifier |
+| `AGENTTRACE_TAGS` | — | Comma-separated `key=value` pairs for trace tagging |
+| `AGENTTRACE_MAX_TRACES` | `1000` | Maximum number of traces to retain in the database |
 
 ---
 
