@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -24,6 +25,8 @@ var (
 type InitOptions struct {
 	Endpoint    string
 	ServiceName string
+	SessionID   string
+	Tags        map[string]string
 }
 
 // Option is a function that configures InitOptions.
@@ -40,6 +43,20 @@ func WithEndpoint(endpoint string) Option {
 func WithServiceName(name string) Option {
 	return func(o *InitOptions) {
 		o.ServiceName = name
+	}
+}
+
+// WithSessionID sets the session ID for grouping traces.
+func WithSessionID(id string) Option {
+	return func(o *InitOptions) {
+		o.SessionID = id
+	}
+}
+
+// WithTags sets arbitrary key-value tags on all traces.
+func WithTags(tags map[string]string) Option {
+	return func(o *InitOptions) {
+		o.Tags = tags
 	}
 }
 
@@ -72,10 +89,41 @@ func Init(opts ...Option) error {
 		return fmt.Errorf("failed to create otlp exporter: %w", err)
 	}
 
+	resAttrs := []attribute.KeyValue{
+		semconv.ServiceName(options.ServiceName),
+	}
+
+	// Session ID from option or env var
+	sessionID := options.SessionID
+	if sessionID == "" {
+		sessionID = os.Getenv("AGENTTRACE_SESSION_ID")
+	}
+	if sessionID != "" {
+		resAttrs = append(resAttrs, attribute.String("agenttrace.session_id", sessionID))
+	}
+
+	// Tags from option or env var
+	tags := options.Tags
+	if tags == nil {
+		tags = make(map[string]string)
+	}
+	envTags := os.Getenv("AGENTTRACE_TAGS")
+	if envTags != "" {
+		for _, pair := range splitAndTrim(envTags, ",") {
+			parts := splitAndTrim(pair, "=")
+			if len(parts) == 2 {
+				if _, exists := tags[parts[0]]; !exists {
+					tags[parts[0]] = parts[1]
+				}
+			}
+		}
+	}
+	for k, v := range tags {
+		resAttrs = append(resAttrs, attribute.String("agenttrace.tags."+k, v))
+	}
+
 	res, err := resource.New(context.Background(),
-		resource.WithAttributes(
-			semconv.ServiceName(options.ServiceName),
-		),
+		resource.WithAttributes(resAttrs...),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create resource: %w", err)
@@ -145,4 +193,16 @@ func TrackTool(ctx context.Context, name string, f func(context.Context) error) 
 	}
 
 	return err
+}
+
+// splitAndTrim splits s by sep and trims whitespace from each part.
+func splitAndTrim(s, sep string) []string {
+	result := make([]string, 0)
+	for _, part := range strings.Split(s, sep) {
+		trimmed := strings.TrimSpace(part)
+		if trimmed != "" {
+			result = append(result, trimmed)
+		}
+	}
+	return result
 }
