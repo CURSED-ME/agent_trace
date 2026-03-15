@@ -32,6 +32,21 @@ class TraceStep(BaseModel):
 
 class AgentTrace(BaseModel):
     trace_id: str = Field(default_factory=lambda: "trc_" + uuid.uuid4().hex[:8])
+    session_id: Optional[str] = None
+    tags: Optional[Dict[str, str]] = None
     timestamp: datetime = Field(default_factory=datetime.utcnow)
     status: str = "running"  # running, completed, error
     steps: List[TraceStep] = Field(default_factory=list)
+
+class DatasetItem(BaseModel):
+    item_id: str = Field(default_factory=lambda: "dsi_" + uuid.uuid4().hex[:8])
+    dataset_id: str
+    inputs: Dict[str, Any]
+    expected_outputs: Optional[Dict[str, Any]] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class Dataset(BaseModel):
+    dataset_id: str = Field(default_factory=lambda: "ds_" + uuid.uuid4().hex[:8])
+    name: str
+    description: Optional[str] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)

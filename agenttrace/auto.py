@@ -163,8 +163,7 @@ def init():
             except ImportError:
                 pass  # Provider not installed, skip silently
             except Exception as e:
-                print(f"DEBUG: Instrumentor {class_name} failed: {e}")
-                logger.debug(f"AgentTrace: Failed to initialize instrumentor {class_name}: {e}")
+                logger.warning(f"AgentTrace: Instrumentor {class_name} failed: {e}")
 
         # Auto-register external frameworks
         from .integrations import auto_register
